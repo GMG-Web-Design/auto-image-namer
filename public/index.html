@@ -30,28 +30,6 @@
             width: 100%;
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-        }
-
-        .logout-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-
-        .logout-btn:hover {
-            background: #c82333;
-        }
-
         h1 {
             text-align: center;
             color: #333;
@@ -581,13 +559,8 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <div>
-                <h1>Auto Image Namer</h1>
-                <p class="subtitle">Upload your screenshots and get AI-generated filenames</p>
-            </div>
-            <button class="logout-btn" id="logoutBtn">Logout</button>
-        </div>
+        <h1>Auto Image Namer</h1>
+        <p class="subtitle">Upload your screenshots and get AI-generated filenames</p>
         
         <div class="analysis-toggle">
                          <div class="mode-selector">
@@ -683,7 +656,6 @@
         const queueList = document.getElementById('queueList');
         const analysisHistory = document.getElementById('analysisHistory');
         const historyList = document.getElementById('historyList');
-        const logoutBtn = document.getElementById('logoutBtn');
 
         let selectedFiles = [];
         let queueCheckInterval = null;
@@ -973,19 +945,6 @@
             results.classList.remove('show');
             loading.classList.remove('show');
             hideError();
-        });
-
-        // Logout functionality
-        logoutBtn.addEventListener('click', async () => {
-            if (confirm('Are you sure you want to logout?')) {
-                try {
-                    await fetch('/logout', { method: 'POST' });
-                    window.location.href = '/';
-                } catch (error) {
-                    console.error('Logout error:', error);
-                    window.location.href = '/';
-                }
-            }
         });
 
         // Initialize page

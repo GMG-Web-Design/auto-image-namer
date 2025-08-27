@@ -7,8 +7,6 @@ const path = require('path');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const { v4: uuidv4 } = require('uuid');
-const session = require('express-session');
-const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const app = express();
@@ -32,25 +30,10 @@ if (!fsSync.existsSync(SAVED_ANALYSES_DIR)) {
   fsSync.mkdirSync(SAVED_ANALYSES_DIR, { recursive: true });
 }
 
-// Authentication configuration
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || bcrypt.hashSync('admin123', 10);
-
-// Session middleware
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
-
 // Middleware
 app.use(cors());
 app.use(express.json());
-// Note: static middleware moved after routes to prevent index.html from overriding our routes
+app.use(express.static('public'));
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -271,52 +254,13 @@ function generateTextOutput(results) {
   return header + analysisText;
 }
 
-// Authentication middleware
-function requireAuth(req, res, next) {
-  if (req.session && req.session.authenticated) {
-    return next();
-  } else {
-    return res.redirect('/');
-  }
-}
-
-// Route to serve the login page (now home page)
+// Route to serve the main page
 app.get('/', (req, res) => {
-  // If already authenticated, redirect to image analysis
-  if (req.session && req.session.authenticated) {
-    return res.redirect('/imageanalysis');
-  }
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-// Legacy login route (redirect to home)
-app.get('/login', (req, res) => {
-  res.redirect('/');
-});
-
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  
-  if (username === ADMIN_USERNAME && bcrypt.compareSync(password, ADMIN_PASSWORD_HASH)) {
-    req.session.authenticated = true;
-    res.json({ success: true, message: 'Login successful' });
-  } else {
-    res.status(401).json({ success: false, message: 'Invalid credentials' });
-  }
-});
-
-app.post('/logout', (req, res) => {
-  req.session.destroy();
-  res.json({ success: true, message: 'Logged out successfully' });
-});
-
-// Route to serve the image analysis page (protected)
-app.get('/imageanalysis', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// New API routes for analysis management (protected)
-app.get('/api/analyses', requireAuth, async (req, res) => {
+// New API routes for analysis management
+app.get('/api/analyses', async (req, res) => {
   try {
     const analyses = await getRecentAnalyses();
     res.json(analyses);
@@ -326,7 +270,7 @@ app.get('/api/analyses', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/analyses/:id', requireAuth, async (req, res) => {
+app.get('/api/analyses/:id', async (req, res) => {
   try {
     const filepath = path.join(SAVED_ANALYSES_DIR, `${req.params.id}.json`);
     const data = JSON.parse(await fs.readFile(filepath, 'utf8'));
@@ -337,7 +281,7 @@ app.get('/api/analyses/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/queue', requireAuth, (req, res) => {
+app.get('/api/queue', (req, res) => {
   const queueStatus = analysisQueue.map(item => ({
     id: item.id,
     name: item.name || 'Unnamed Analysis',
@@ -353,7 +297,7 @@ app.get('/api/queue', requireAuth, (req, res) => {
   });
 });
 
-app.delete('/api/queue/:id', requireAuth, (req, res) => {
+app.delete('/api/queue/:id', (req, res) => {
   const analysisId = req.params.id;
   const itemIndex = analysisQueue.findIndex(item => item.id === analysisId);
   
@@ -379,8 +323,8 @@ app.delete('/api/queue/:id', requireAuth, (req, res) => {
   });
 });
 
-// Route to handle image analysis - now with queueing (protected)
-app.post('/analyze', requireAuth, upload.array('images', 50), async (req, res) => {
+// Route to handle image analysis - now with queueing
+app.post('/analyze', upload.array('images', 50), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No images uploaded' });
@@ -424,9 +368,6 @@ app.post('/analyze', requireAuth, upload.array('images', 50), async (req, res) =
     });
   }
 });
-
-// Serve static files after all routes are defined
-app.use(express.static('public'));
 
 // Error handling middleware
 app.use((error, req, res, next) => {
@@ -565,23 +506,14 @@ async function callPerplexityAPI(prompt, base64Image, useWebSearch) {
   return response.data.choices[0].message.content.trim();
 }
 
-// For Vercel deployment, we need to handle the serverless environment differently
-if (process.env.NODE_ENV !== 'production') {
-  // Start cleanup job - runs every hour (only in development)
-  setInterval(cleanupOldAnalyses, 60 * 60 * 1000);
-  
-  // Run cleanup on startup (only in development)
-  cleanupOldAnalyses();
-  
-  app.listen(PORT, () => {
-    console.log(`🚀 Auto Image Namer running at http://localhost:${PORT}`);
-    console.log('📝 Make sure to set your OPENAI_API_KEY and PERPLEXITY_API_KEY in the .env file');
-    console.log('📁 Analysis storage and queueing system initialized');
-  });
-} else {
-  // For production (Vercel), run cleanup on each cold start
-  cleanupOldAnalyses().catch(console.error);
-}
+// Start cleanup job - runs every hour
+setInterval(cleanupOldAnalyses, 60 * 60 * 1000);
 
-// Export for Vercel
-module.exports = app; 
+// Run cleanup on startup
+cleanupOldAnalyses();
+
+app.listen(PORT, () => {
+  console.log(`🚀 Auto Image Namer running at http://localhost:${PORT}`);
+  console.log('📝 Make sure to set your OPENAI_API_KEY and PERPLEXITY_API_KEY in the .env file');
+  console.log('📁 Analysis storage and queueing system initialized');
+}); 
