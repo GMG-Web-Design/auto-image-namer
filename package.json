@@ -2,10 +2,18 @@
   "name": "auto-image-namer",
   "version": "1.0.0",
   "description": "Automatically rename screenshots using OpenAI Vision API",
-  "main": "server.js",
+  "main": "electron-main.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "electron": "electron .",
+    "electron-dev": "NODE_ENV=development electron .",
+    "build": "electron-builder",
+    "build-mac": "electron-builder --mac",
+    "build-win": "electron-builder --win",
+    "build-linux": "electron-builder --linux",
+    "dist": "npm run build",
+    "pack": "electron-builder --dir"
   },
   "dependencies": {
     "axios": "^1.11.0",
@@ -17,6 +25,8 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "electron": "^37.3.1",
+    "electron-builder": "^26.0.12",
     "nodemon": "^3.0.2"
   },
   "keywords": [
@@ -26,5 +36,61 @@
     "screenshots"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "build": {
+    "appId": "com.autoimage.namer",
+    "productName": "Auto Image Namer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/electron/**/*",
+      "!node_modules/electron-builder/**/*",
+      "!dist/**/*",
+      "!.git/**/*",
+      "!README.md",
+      "!.env",
+      "!saved-analyses/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "category": "Graphics",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
 }

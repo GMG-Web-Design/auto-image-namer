@@ -1,0 +1,20 @@
+ICON PLACEHOLDER
+
+To complete the desktop app setup, you'll need to create icon files:
+
+1. Create a 512x512 PNG icon and save as: assets/icon.png
+2. For macOS: Convert to ICNS format and save as: assets/icon.icns  
+3. For Windows: Convert to ICO format and save as: assets/icon.ico
+
+Suggested icon design:
+- Camera/photo icon with a gear/settings symbol
+- Blue gradient background (#667eea to #764ba2)
+- White icon elements
+- Modern, clean design
+
+You can use online converters or tools like:
+- png2ico.com (for ICO conversion)
+- cloudconvert.com (for ICNS conversion)
+- Or design tools like Figma, Sketch, or Photoshop
+
+For now, the app will work without icons (they'll just be default Electron icons). 
